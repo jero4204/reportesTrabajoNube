@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Response
 from pymongo import MongoClient
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 from io import BytesIO
@@ -107,3 +109,4 @@ def generar_reporte():
     pdf_buf.seek(0)
 
     return Response(pdf_buf.read(), media_type="application/pdf")
+
