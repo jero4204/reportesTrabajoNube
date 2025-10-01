@@ -12,7 +12,6 @@ import os
 
 app = FastAPI()
 
-# URI de conexión a Mongo Atlas (se pasa por variable de entorno en OpenShift)
 MONGO_URI = os.getenv("MONGO_URI", "")
 client = MongoClient(MONGO_URI)
 db = client["compraalquilerbicicletas"]
@@ -27,7 +26,7 @@ def generar_reporte():
     df = pd.DataFrame(docs)
 
     # Asegurarse de que existan los campos esperados
-    for col in ["mode", "price", "period", "created_at", "type"]:
+    for col in ["mode", "price", "period", "type"]:
         if col not in df.columns:
             df[col] = None
 
@@ -42,52 +41,31 @@ def generar_reporte():
     ingresos_compra = df[df["mode"] == "compra"]["ingreso"].sum()
     ingresos_alquiler = df[df["mode"] == "alquiler"]["ingreso"].sum()
 
-    # Convertir fechas ignorando zona horaria
-    df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce").dt.tz_localize(None)
-    df = df.dropna(subset=["created_at"])
-
-    # Timeline diario
-    timeline = (
-        df.groupby([pd.Grouper(key="created_at", freq="D"), "mode"])["ingreso"]
-        .sum()
-        .unstack(fill_value=0)
-    )
-
     # --- Gráficas ---
     figs = []
 
-    # 1. Línea de tiempo
+    # 1. Pastel Compra vs Alquiler
     fig1, ax1 = plt.subplots()
-    timeline.plot(ax=ax1)
-    ax1.set_title("Ingresos diarios por modo")
+    df["mode"].value_counts().plot.pie(ax=ax1, autopct="%1.1f%%")
+    ax1.set_ylabel("")
+    ax1.set_title("Distribución Compra vs Alquiler")
     buf1 = BytesIO()
     plt.savefig(buf1, format="png")
     buf1.seek(0)
     figs.append(buf1)
     plt.close(fig1)
 
-    # 2. Pastel Compra vs Alquiler
-    fig2, ax2 = plt.subplots()
-    df["mode"].value_counts().plot.pie(ax=ax2, autopct="%1.1f%%")
-    ax2.set_ylabel("")
-    ax2.set_title("Distribución Compra vs Alquiler")
-    buf2 = BytesIO()
-    plt.savefig(buf2, format="png")
-    buf2.seek(0)
-    figs.append(buf2)
-    plt.close(fig2)
-
-    # 3. Pastel Tipos de bicicletas
+    # 2. Pastel Tipos de bicicletas
     if "type" in df.columns:
-        fig3, ax3 = plt.subplots()
-        df["type"].value_counts().plot.pie(ax=ax3, autopct="%1.1f%%")
-        ax3.set_ylabel("")
-        ax3.set_title("Tipos de bicicletas")
-        buf3 = BytesIO()
-        plt.savefig(buf3, format="png")
-        buf3.seek(0)
-        figs.append(buf3)
-        plt.close(fig3)
+        fig2, ax2 = plt.subplots()
+        df["type"].value_counts().plot.pie(ax=ax2, autopct="%1.1f%%")
+        ax2.set_ylabel("")
+        ax2.set_title("Tipos de bicicletas")
+        buf2 = BytesIO()
+        plt.savefig(buf2, format="png")
+        buf2.seek(0)
+        figs.append(buf2)
+        plt.close(fig2)
 
     # --- PDF ---
     pdf_buf = BytesIO()
@@ -116,8 +94,3 @@ def generar_reporte():
     pdf_buf.seek(0)
 
     return Response(pdf_buf.read(), media_type="application/pdf")
-
-
-
-
-
