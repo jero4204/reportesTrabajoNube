@@ -11,9 +11,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Exponer el puerto que OpenShift espera
-EXPOSE 8000
+EXPOSE 5000
 
 # Ejecutar la app desde app/main.py
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5000"]
+
 
 
