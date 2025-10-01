@@ -26,6 +26,11 @@ def generar_reporte():
 
     df = pd.DataFrame(docs)
 
+    # Asegurarse de que existan los campos esperados
+    for col in ["mode", "price", "period", "created_at", "type"]:
+        if col not in df.columns:
+            df[col] = None
+
     # Calcular ingresos
     df["ingreso"] = df.apply(
         lambda row: row["price"] * row["period"]
@@ -37,12 +42,11 @@ def generar_reporte():
     ingresos_compra = df[df["mode"] == "compra"]["ingreso"].sum()
     ingresos_alquiler = df[df["mode"] == "alquiler"]["ingreso"].sum()
 
-    # Convertir fechas
-    if "created_at" in df.columns:
-        df["created_at"] = pd.to_datetime(df["created_at"], utc=True)
-    else:
-        df["created_at"] = [datetime.utcnow().replace(tzinfo=timezone.utc)] * len(df)
+    # Convertir fechas ignorando zona horaria
+    df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce").dt.tz_localize(None)
+    df = df.dropna(subset=["created_at"])
 
+    # Timeline diario
     timeline = (
         df.groupby([pd.Grouper(key="created_at", freq="D"), "mode"])["ingreso"]
         .sum()
@@ -60,6 +64,7 @@ def generar_reporte():
     plt.savefig(buf1, format="png")
     buf1.seek(0)
     figs.append(buf1)
+    plt.close(fig1)
 
     # 2. Pastel Compra vs Alquiler
     fig2, ax2 = plt.subplots()
@@ -70,6 +75,7 @@ def generar_reporte():
     plt.savefig(buf2, format="png")
     buf2.seek(0)
     figs.append(buf2)
+    plt.close(fig2)
 
     # 3. Pastel Tipos de bicicletas
     if "type" in df.columns:
@@ -81,6 +87,7 @@ def generar_reporte():
         plt.savefig(buf3, format="png")
         buf3.seek(0)
         figs.append(buf3)
+        plt.close(fig3)
 
     # --- PDF ---
     pdf_buf = BytesIO()
@@ -109,6 +116,8 @@ def generar_reporte():
     pdf_buf.seek(0)
 
     return Response(pdf_buf.read(), media_type="application/pdf")
+
+
 
 
 
