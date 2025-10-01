@@ -39,7 +39,7 @@ def generar_reporte():
 
     # Convertir fechas
     if "created_at" in df.columns:
-        df["created_at"] = pd.to_datetime(df["created_at"])
+        df["created_at"] = pd.to_datetime(df["created_at"], utc=True)
     else:
         df["created_at"] = datetime.utcnow()
 
@@ -109,4 +109,5 @@ def generar_reporte():
     pdf_buf.seek(0)
 
     return Response(pdf_buf.read(), media_type="application/pdf")
+
 
